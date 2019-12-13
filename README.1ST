@@ -1,0 +1,24 @@
+   title: Self-test
+ version: 1.0
+released: 2019-12-07
+  author: Sebastian Pawlak aka tr1x
+   party: Silly Venture 2019
+category: Atari XL/XE Intro 256B
+hardware: original Atari XL/XE 64KB PAL
+
+Successfully tested with Altirra/x64 2.60: XE PAL/NTSC / 64K / BASIC.
+
+Works with Atari XL/XE OS ver.2 (Atari OS v2 83.10.05.rom).
+Does not work with Atari XL/XE OS ver.3 (Atari OS v3 85.01.03.rom).
+
+Successfully tested with original Atari 65XE + Lotharek's Sio2sd Ver. 1.3.
+Turn the computer on while you are not holding down the OPTION key.
+
+Unsuccessfully tested with original Atari 65XE ECI.
+
+Run it with clean memory.
+
+May not work with some DOSes or file managers.
+
+Greetz to: Asal, evvelina, Grey, Lutel, perinoid, Shredder,
+           sun, Talimoon, Virt

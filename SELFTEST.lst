@@ -1,0 +1,183 @@
+mads 2.0.6 build 58 (28 Jan 17)
+Source: C:\jac\wudsn\Workspace\SELFTEST\SELFTEST.ASM
+     1 				; "Self-test", Atari XL/XE Intro 256B
+     2 				; music by Modest Mussorgsky, the piano suite Pictures at an Exhibition
+     3 				; transcripted for the piano by Harold Bauer
+     4 				; code by tr1x
+     5 				; requirements: original Atari XL/XE 64KB PAL
+     6 				; version: 1.0
+     7 				; release date: 2019-12-07
+     8
+     9 					org $068e	; it is set so "play" address is $..b5 
+    10
+    11 = 0012			rtclok	equ $0012
+    12 = 0057			memaddr	equ $0057	; we do believe that the initial value < "ststart"
+    13 = 00CD			duratio	equ $00cd
+    14 = 0200			vdslst	equ $0200
+    15 = 02C8			color4	equ $02c8
+    16 = 5000			ststart	equ $5000	; Self-test, first page
+    17 = 5059			stinien	equ $5059	; Self-test, the end of initialization
+    18 = 51F5			text	equ $51f5	; Audio-Visual Test, text "RESET OR HELP TO EXIT"
+    19 = 5231			dlist	equ $5231	; Audio-Visual Test, display list
+    20 = 53B5			pause	equ $53b5	; Audio-Visual Test, pause
+    21 = 53B7			delay	equ $53b7	; Audio-Visual Test, delay
+    22 = 5510			mute	equ $5510	; Audio-Visual Test, mute
+    23 = 5557			auvitst	equ $5557	; Audio-Visual Test, memory address
+    24 = 564F			pausjsr	equ $564f	; Audio-Visual Test, "jsr pause"
+    25 = D016			colpf0	equ $d016
+    26 = D018			colpf2	equ $d018
+    27 = D200			audf1	equ $d200
+    28 = D201			audc1	equ $d201
+    29 = D202			audf2	equ $d202
+    30 = D203			audc2	equ $d203
+    31 = D204			audf3	equ $d204
+    32 = D205			audc3	equ $d205
+    33 = D301			portb	equ $d301
+    34 = D40B			vcount	equ $d40b
+    35 = D40E			nmien	equ $d40e
+    36
+    37 					; copy Self-test from ROM to RAM
+    38 					;ldy #$00	; not needed, since (memaddr) < "ststart"
+    39 FFFF> 068E-0787> A2 7D	loop1	ldx #$7d	; Self-test ROM on
+    40 0690 8E 01 D3			stx portb
+    41 0693 B1 57			lda (memaddr),y
+    42 0695 A2 FD			ldx #$fd	; Self-test ROM off	
+    43 0697 8E 01 D3			stx portb
+    44 069A 91 57			sta (memaddr),y
+    45 069C 88				dey
+    46 069D D0 EF			bne loop1
+    47 069F E6 58			inc memaddr+1
+    48 06A1 A5 58			lda memaddr+1
+    49 06A3 C9 60			cmp #$60	; normally it should be #$58
+    50 06A5 D0 E7			bne loop1	
+    51
+    52 					; inject "rts" in place of "lda $d01f"
+    53 					;lda #$60	; "rts" opcode; not needed, since "cmp" has #$60
+    54 06A7 8D 59 50			sta stinien
+    55
+    56 					; Self-test initialization
+    57 06AA 20 00 50			jsr ststart
+    58
+    59 					; inject "jsr play" in place of "jsr $53b5"
+    60 					;lda #$20	; injection of "jsr" opcode is not needed,
+    61 					;sta pausjsr	; ..since "jsr" is already there
+    62 					;lda <play	; injection of low byte is not needed,
+    63 					;sta pausjsr+1	; ..since "org" is set so "play" address is $..b5
+    64 06AD A9 06			lda >play
+    65 06AF 8D 51 56			sta pausjsr+2
+    66
+    67 					; Audio-Visual Test
+    68 06B2 4C 57 55			jmp auvitst
+    69
+    70 					; copy greetings
+    71 06B5 A0 18		play	ldy #greetze-greetz-1
+    72 06B7 B9 6F 07		loop2	lda greetz,y
+    73 06BA 99 F9 51			sta text+4,y
+    74 06BD 88				dey
+    75 06BE 10 F7			bpl loop2
+    76
+    77 					; set DLI routine
+    78 06C0 4E 0E D4			lsr nmien	; disable DLI
+    79 06C3 A9 2B			lda #<dlirout
+    80 06C5 8D 00 02			sta vdslst
+    81 06C8 A9 07			lda #>dlirout
+    82 06CA 8D 01 02			sta vdslst+1
+    83 06CD 2E 0E D4			rol nmien	; enable DLI
+    84
+    85 					; modify display list to enable DLIs
+    86 06D0 A9 F0			lda #$f0
+    87 06D2 8D 34 52			sta dlist+$03
+    88 06D5 8D 3B 52			sta dlist+$0a
+    89 06D8 A9 C6			lda #$c6
+    90 06DA 8D 35 52			sta dlist+$04
+    91
+    92 06DD A9 8B			lda #$8b
+    93 06DF A0 22			ldy #$22
+    94 06E1 99 3F 52		loop3	sta dlist+$0e,y
+    95 06E4 88				dey
+    96 06E5 10 FA			bpl loop3
+    97
+    98 					; play music
+    99 06E7 A0 33			ldy #notese-notes-1
+   100 06E9 B9 3B 07		loop4	lda notes,y
+   101 06EC C9 21			cmp #$20+1	; set duration, if a value < #$21
+   102 06EE B0 04			bcs notdura
+   103 06F0 85 CD			sta duratio
+   104 06F2 50 30			bvc skip	; 1 byte less than "jmp skip"
+   105 06F4 10 1A		notdura	bpl single	; is a single note?
+   106 06F6 29 7F		chord	and #$7f	; a chord
+   107 06F8 48				pha		; push the first note in a chord into stack
+   108 06F9 88				dey
+   109 06FA B9 3B 07			lda notes,y
+   110 06FD 8D 02 D2			sta audf2
+   111 0700 A9 A3			lda #$a3
+   112 0702 8D 03 D2			sta audc2
+   113 0705 8D 05 D2			sta audc3
+   114 0708 88				dey
+   115 0709 B9 3B 07			lda notes,y
+   116 070C 8D 04 D2			sta audf3
+   117 070F 68				pla		; pop the first note in a chord from stack
+   118 0710 8D 00 D2		single	sta audf1	; a single note
+   119 0713 A9 A8			lda #$a8
+   120 0715 8D 01 D2			sta audc1
+   121 0718 98				tya
+   122 0719 48				pha
+   123 071A A6 CD			ldx duratio	; a note duration
+   124 071C 20 B7 53			jsr delay
+   125 071F 20 10 55			jsr mute
+   126 0722 68				pla
+   127 0723 A8				tay
+   128 0724 88			skip	dey
+   129 0725 10 C2			bpl loop4
+   130 0727 20 B5 53			jsr pause	; the instruction that was replaced with "jsr play"
+   131 072A 60				rts
+   132
+   133 					; display list interrupt routine
+   134 072B 48			dlirout	pha
+   135 072C AD 0B D4			lda vcount	; rainbow
+   136 072F 65 14			adc rtclok+2
+   137 0731 8D 16 D0			sta colpf0
+   138 0734 A9 30			lda #$30	; background of greetings
+   139 0736 8D 18 D0			sta colpf2
+   140 0739 68				pla
+   141 073A 40				rti
+   142
+   143 					; 4th bar
+   144 				            ;  A4   C4   F3
+   145 073B 90 79 DB		notes	.byte $90, $79, $5b|$80
+   146 					    ;  G4   C4   G3
+   147 073E A2 79 D1			.byte $a2, $79, $51|$80
+   148 					    ;  E3   G3   C3
+   149 0741 60 51 BC			.byte $60, $51, $3c|$80
+   150 					    ;  D3   G3  Bb3
+   151 0744 6C 51 C4			.byte $6c, $51, $44|$80
+   152 					    ;  F3  Bb3   D2      duration
+   153 0747 5B 44 B5 20			.byte $5b, $44, $35|$80, $20
+   154 					    ;  C4   A3   F2
+   155 074B 79 48 AD			.byte $79, $48, $2d|$80
+   156 					    ;  C4   A3   C3      duration
+   157 074E 79 48 BC 10			.byte $79, $48, $3c|$80, $10
+   158
+   159 					; 3rd bar
+   160 					    ;  F3   A3   D2      duration
+   161 0752 5B 48 B5 20			.byte $5b, $48, $35|$80, $20
+   162 					    ;  C4   A3   F2
+   163 0756 79 48 AD			.byte $79, $48, $2d|$80
+   164 					    ;  C4   A3   C3      duration
+   165 0759 79 48 BC 10			.byte $79, $48, $3c|$80, $10
+   166 					    ; Bb4   D3  Bb3
+   167 075D 88 6C C4			.byte $88, $6c, $44|$80
+   168 					    ;  A4   C4   F3
+   169 0760 90 79 DB			.byte $90, $79, $5b|$80
+   170 					    ; Bb4   D3   G3
+   171 0763 88 6C D1			.byte $88, $6c, $51|$80
+   172
+   173 					; 2nd bar
+   174 					    ;  F3   G3   C3  Bb3   D2  duration
+   175 0766 5B 51 3C 44 35 20		.byte $5b, $51, $3c, $44, $35, $20
+   176 					    ;  F2   C3  duration
+   177 076C 2D 3C 10			.byte $2d, $3c, $10	; <<< the entry point
+   178 076F			notese
+   179
+   180 076F 27 72 65 65 74 7A + greetz	.byte "Greetz to all Atari fans!"
+   181 0788			greetze
